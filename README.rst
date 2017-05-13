@@ -46,7 +46,7 @@ last 30 minutes worth of posts from the San Diego page (43), free stuff (171).
     > ]
 
 Where did those numbers come from? They're the ids for the page and section,
-respectively. Use `craigdata list <pages|sections>` to list available pages and sections and pipe to
+respectively. Use the list command to see available pages and sections and pipe to
 a filter or pager to find the ids you need before pulling data
 ::
 
@@ -55,40 +55,33 @@ a filter or pager to find the ids you need before pulling data
     > 1  : US >> Alabama >> birmingham
     > 2  : US >> Alabama >> dothan
     > 3  : US >> Alabama >> florence / muscle shoals
-    > 4  : US >> Alabama >> gadsden-anniston
-    > 5  : US >> Alabama >> huntsville / decatur
-    > 6  : US >> Alabama >> mobile
-    > 7  : US >> Alabama >> montgomery
     > ...
+    >
     $ craigdata list pages | grep 'California'
     > 26 : US >> California >> bakersfield
     > 27 : US >> California >> chico
     > 28 : US >> California >> fresno / madera
-    > 29 : US >> California >> gold country
-    > 30 : US >> California >> hanford-corcoran
     > ...
+    >
     $ craigdata list pages | grep 'san diego'
     > 43 : US >> California >> san diego
-    > ...
+    >
     $ craigdata list sections | less
     > 0  : community
     > 1  : community >> activities
     > 2  : community >> artists
-    > 3  : community >> childcare
-    > 4  : community >> classes
-    > 5  : community >> events
     > ...
+    >
     $ craigdata list sections | grep 'motorcycles'
     > 179: for sale >> motorcycles >> Motorcycles >> ALL MOTORCYCLES
     > 180: for sale >> motorcycles >> Motorcycles >> BY-OWNER ONLY
     > 181: for sale >> motorcycles >> Motorcycles >> BY-DEALER ONLY
     > 182: for sale >> motorcycles >> Parts & Accessories >> ALL PARTS & ACCESSORIES
-    > 183: for sale >> motorcycles >> Parts & Accessories >> BY-OWNER ONLY
-    > 184: for sale >> motorcycles >> Parts & Accessories >> BY-DEALER ONLY
+    > ...
 
-There are couple options for the `pull` command. The first command above shows
-using `pull` with the default of getting posts within a 30 minute window of the
-latest post. You can change that window using the `-w` option. The acceptable
+There are a couple options for pulling post data. The first command above shows
+using pull with the default behavior: getting all post data 30 minutes back from
+the most recent post. You can change that window using the `-w` option. The acceptable
 time window formats are: #:# (hrs:mins), # (hrs) or :# (minutes).
 ::
 
@@ -96,9 +89,9 @@ time window formats are: #:# (hrs:mins), # (hrs) or :# (minutes).
     $ craigdata 43 171 -w 2      # 2 hour window
     $ craigdata 43 171 -w :45    # 45 minute window
 
-By default, the `pull` command only pulls fields from the section page that lists
-posts. You can specify the `-d` option to visit each post page and additionally
-pull the description and attributes
+By default, a shallow data scrape is done from the post listings page. Use the -d (deep)
+option to have the script visit each post page and additionally pull the description
+and attributes, if available.
 
 ::
 
