@@ -129,6 +129,10 @@ Installation
 
     python setup.py install
 
+craigdata requires lxml, which depends on libxml2 and libxslt. If these aren't installed already
+setuptools will give you and error trying to install lxml. See the requirements page for lxml:
+http://lxml.de/installation.html
+
 Usage
 -----
 craigdata has three sub-commands: pull, list and rebuild. Run `craigdata <pull|list|rebuild> -h`
