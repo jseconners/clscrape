@@ -133,19 +133,9 @@ Usage
 -----
 craigdata has three sub-commands: pull, list and rebuild. Run `craigdata <pull|list|rebuild> -h`
 to see help specific to that sub-command.
+
+pull
 ::
-
-    usage: craigdata [-h] {rebuild,list,pull} ...
-
-    craigslist post data puller
-
-    optional arguments:
-      -h, --help           show this help message and exit
-
-    commands:
-      rebuild            rebuild page/section database file
-      list               list pages or sections
-      pull               pull some post data
 
     usage: craigdata pull [-h] [-d] [-w WINDOW] pid sid
 
@@ -159,6 +149,8 @@ to see help specific to that sub-command.
       -w WINDOW, --window WINDOW
                             time window back from most recent post, # (hrs), #:#
                             (hrs:mins), :# (mins). default is :30 (30 mins)
+list
+::
 
     usage: craigdata list [-h] {pages,sections}
 
@@ -167,6 +159,9 @@ to see help specific to that sub-command.
 
     optional arguments:
       -h, --help        show this help message and exit
+
+build
+::
 
     usage: craigdata build [-h]
 
