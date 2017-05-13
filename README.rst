@@ -106,7 +106,7 @@ pull the description and attributes
     > [
     >   {
     >     "date_time": "2017-05-12 14:17",
-    >     "description": "** LOW MILES ** Excellent Suzuki Boulevard M50 805cc with Cobra exhaust. Fast and loud, new tires, no rust or dings $3600 firm Has now 10951 miles but I ride to work 2 or 3x a week and joy ride...",
+    >     "description": "** LOW MILES ** Excellent Suzuki Boulevard M50 805cc with Cobra exhaust.",
     >     "post_id": "6129140162",
     >     "url": "https://sandiego.craigslist.org/esd/mcy/6129140162.html",
     >     "attributes": {
