@@ -127,16 +127,17 @@ def build_db():
     # parse sections using the first available main page
     section_paths = _parse_sections(page_paths[0][-1])
 
+    db_structure = json.dumps({
+        'pages': page_paths,
+        'sections': section_paths
+    }, indent=4, separators=(',', ': '))
+
     # Write configs to file
-
-    open(DB_FILE, 'w').write(
-        json.dumps({
-            'pages': page_paths,
-            'sections': section_paths
-        }, indent=4, separators=(',', ': '))
-    )
-
-
+    try:
+        open(DB_FILE, 'w').write(db_structure)
+    except IOError as e:
+        print "I/O error({0}): {1}".format(e.errno, e.strerror)
+        sys.exit(1)
 
 def _display_paths(records):
     """ Display structured content from the database file """
