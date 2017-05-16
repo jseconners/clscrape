@@ -27,19 +27,30 @@ last 30 minutes worth of posts from the San Diego page (43), free stuff (171).
 ::
 
     $ craigdata pull 43 171
-    > DATE=`date +%Y-%m-%d`
     > [
     >   {
-    >     "url": "https://sandiego.craigslist.org/csd/zip/6129099038.html",
-    >     "date_time": "2017-05-12 13:49",
-    >     "post_id": "6129099038",
-    >     "title": "Windsurfing board"
+    >     "date_time": "2017-05-16 15:48",
+    >     "neighborhood": "(MIssion Hills)",
+    >     "title": "Bee Hive/Swarm, Free you remove.",
+    >     "url": "https://sandiego.craigslist.org/csd/zip/6134790677.html",
+    >     "price": null,
+    >     "tags": [
+    >         "pic",
+    >         "map"
+    >     ],
+    >     "post_id": "6134790677"
     >   },
     >   {
-    >     "url": "https://sandiego.craigslist.org/nsd/zip/6129094907.html",
-    >     "date_time": "2017-05-12 13:46",
-    >     "post_id": "6129094907",
-    >     "title": "Free desk - very good condition!"
+    >     "date_time": "2017-05-16 15:39",
+    >     "neighborhood": "(Carlsbad)",
+    >     "title": "Free glass smoking pipes",
+    >     "url": "https://sandiego.craigslist.org/nsd/zip/6134777829.html",
+    >     "price": null,
+    >     "tags": [
+    >         "pic",
+    >         "map"
+    >     ],
+    >     "post_id": "6134777829"
     >   },
     >   ...
     >   ...
@@ -85,9 +96,9 @@ the most recent post. You can change that window using the `-w` option. The acce
 time window formats are: #:# (hrs:mins), # (hrs) or :# (minutes).
 ::
 
-    $ craigdata 43 171 -w 1:22   # 1 hour and 22 minute window
-    $ craigdata 43 171 -w 2      # 2 hour window
-    $ craigdata 43 171 -w :45    # 45 minute window
+    $ craigdata pull 43 171 -w 1:22   # 1 hour and 22 minute window
+    $ craigdata pull 43 171 -w 2      # 2 hour window
+    $ craigdata pull 43 171 -w :45    # 45 minute window
 
 By default, a shallow data scrape is done from the post listings page. Use the -d (deep)
 option to have the script visit each post page and additionally pull the description
@@ -95,23 +106,27 @@ and attributes, if available.
 
 ::
 
-    $ craigdata 43 171 -w :2 -d
+    $ craigdata pull 43 180 -w :2 -d
     > [
     >   {
-    >     "date_time": "2017-05-12 14:17",
-    >     "description": "** LOW MILES ** Excellent Suzuki Boulevard M50 805cc with Cobra exhaust.",
-    >     "post_id": "6129140162",
-    >     "url": "https://sandiego.craigslist.org/esd/mcy/6129140162.html",
+    >     "date_time": "2017-05-16 16:08",
+    >     "neighborhood": "(EAST L.A.)",
+    >     "description": "CAN AM SPYDER GS PHANTOM BLACK LIMITED EDITION SM5 (ONLY 500 MADE ) LIKE NEW / SUPER CLEAN ONLY 3890 MILES INCLUDES LEO/VINCE HIGH PERFORMANCE EXHAUST ($1000)",
+    >     "title": "CAN- AM SPYDER GS PHANTOM BLACK LIMITED EDITION SM5 ( ONLY 500 MADE)",
+    >     "url": "https://sandiego.craigslist.org/csd/mcy/6134812352.html",
+    >     "price": "$10995",
+    >     "tags": [
+    >         "map"
+    >     ],
+    >     "post_id": "6134812352",
     >     "attributes": {
-    >        "title status": "clean",
-    >        "engine displacement (CC)": "805",
-    >        "odometer": "10951",
-    >        "transmission": "manual",
-    >        "paint color": "grey",
-    >        "fuel": "gas",
-    >        "condition": "excellent"
-    >     },
-    >     "title": "2006 Suzuki Boulevard M50 805cc **Low miles**"
+    >         "title status": "clean",
+    >         "odometer": "3890",
+    >         "transmission": "manual",
+    >         "paint color": "black",
+    >         "fuel": "gas",
+    >         "condition": "like new"
+    >     }
     >   }
     > ]
 

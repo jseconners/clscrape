@@ -27,6 +27,19 @@ SKIP_SECTIONS = [
 ]
 POST_DATA = []
 
+
+def __get_first(html_obj, xpath, text=False):
+    """ Get first element returned from xpath expression, if available """
+    res = html_obj.xpath(xpath)
+    if len(res):
+        if text and hasattr(html_obj, "text_content"):
+            return res[0].text_content().strip()
+        else:
+            return res[0]
+    else:
+        return None
+
+
 def _get_page_obj(url):
     """ Return page at url as object created from lxml.html.fromstring """
     try:
@@ -35,6 +48,7 @@ def _get_page_obj(url):
         print("Failed retrieving {}".format(url)) >> sys.stderr
         sys.exit(1)
     return lxml.html.fromstring(res.content)
+
 
 def _parse_pages(url):
     """ Parse all available pages from sites page """
@@ -56,9 +70,9 @@ def _parse_submenu_page(url):
 
     paths = []
     # This is the 'by owner', 'by dealer', etc. type
-    left_sides = page.xpath('//section[@class="body"]/div[@class="leftside"]')
-    if len(left_sides):
-        for h3 in left_sides[0].xpath('h3'):
+    left_side = __get_first(page, '//section[@class="body"]/div[@class="leftside"]')
+    if left_side is not None:
+        for h3 in left_side.xpath('h3'):
             header = h3.text.rstrip(':')
             ul = h3.getnext()
             for li_a in ul.xpath('li/a'):
@@ -88,9 +102,9 @@ def _parse_sections(url):
             continue
 
         # Add link to aggregate section page if available
-        section_links = header.xpath('a')
-        if len(section_links):
-            paths.append([section, section_links[0].attrib['href']])
+        section_link = __get_first(header, 'a')
+        if section_link is not None:
+            paths.append([section, section_link.attrib['href']])
 
         # Parse subsections
         subsection_div = header.getnext()
@@ -139,11 +153,12 @@ def build_db():
         print "I/O error({0}): {1}".format(e.errno, e.strerror)
         sys.exit(1)
 
+
 def _display_paths(records):
     """ Display structured content from the database file """
     for (i, p) in enumerate(records):
         format_string = "{:<3}: " + " >> ".join([j for j in p[:-1]])
-        print format_string.format(i, *p).encode('utf-8')
+        print(format_string.format(i, *p).encode('utf-8'))
 
 
 def get_parser():
@@ -235,10 +250,19 @@ def get_data(url, window, deep=False):
         if post_datetime < end_datetime:
             break
 
-        title = post.xpath("a[@class='result-title hdrlnk']")[0]
+        title = __get_first(post, "a[@class='result-title hdrlnk']")
         row['title'] = title.text_content()
+        row['neighborhood'] = __get_first(post, 'span[@class="result-meta"]/span[@class="result-hood"]', True)
+        row['price'] = __get_first(post, 'span[@class="result-meta"]/span[@class="result-price"]', True)
         row['url'] = urljoin(url, title.attrib['href'])
         row['post_id'] = title.attrib['data-id']
+
+        tags = __get_first(post, 'span[@class="result-meta"]/span[@class="result-tags"]', True)
+        if tags is not None:
+            row['tags'] = tags.split()
+        else:
+            row['tags'] = []
+
 
         # Go deep and pull more fields from post page
         if deep:
