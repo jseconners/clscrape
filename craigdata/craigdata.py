@@ -201,7 +201,7 @@ def parse_post_attributes(post_page):
     attributes = []
     for att in post_page.xpath('//p[@class="attrgroup"]/span'):
         parts = tuple([p.strip() for p in att.text_content().split(':')])
-        if len(parts) < 2:
+        if len(parts) != 2:
             continue
         attributes.append(parts)
     return dict(attributes)
@@ -211,12 +211,9 @@ def get_post_data(url):
     """ Parse data from the actual post page """
     post_page = lxml.html.fromstring(requests.get(url).content)
     row = {
-        'description': None,
+        'description': __get_first(post_page, '//meta[@name="description"]', True),
         'attributes': parse_post_attributes(post_page)
     }
-    description_res = post_page.xpath('//meta[@name="description"]')
-    if len(description_res):
-        row['description'] = description_res[0].attrib['content']
     return row
 
 
@@ -262,7 +259,6 @@ def get_data(url, window, deep=False):
             row['tags'] = tags.split()
         else:
             row['tags'] = []
-
 
         # Go deep and pull more fields from post page
         if deep:
