@@ -28,14 +28,11 @@ SKIP_SECTIONS = [
 POST_DATA = []
 
 
-def __get_first(html_obj, xpath, text=False):
+def __get_first(html_obj, xpath):
     """ Get first element returned from xpath expression, if available """
     res = html_obj.xpath(xpath)
     if len(res):
-        if text and hasattr(html_obj, "text_content"):
-            return res[0].text_content().strip()
-        else:
-            return res[0]
+        return res[0]
     else:
         return None
 
@@ -70,15 +67,13 @@ def _parse_submenu_page(url):
 
     paths = []
     # This is the 'by owner', 'by dealer', etc. type
-    left_side = __get_first(page, '//section[@class="body"]/div[@class="leftside"]')
-    if left_side is not None:
-        for h3 in left_side.xpath('h3'):
-            header = h3.text.rstrip(':')
-            ul = h3.getnext()
-            for li_a in ul.xpath('li/a'):
-                section = li_a.text
-                section_href = li_a.attrib['href']
-                paths.append([header, section, section_href])
+    for h3 in page.xpath('//section[@class="body"]/div[@class="leftside"]/h3'):
+        header = h3.text.rstrip(':')
+        ul = h3.getnext()
+        for li_a in ul.xpath('li/a'):
+            section = li_a.text
+            section_href = li_a.attrib['href']
+            paths.append([header, section, section_href])
     # Everything else. Just find all the links to valid post pages
     else:
         for section_link in page.xpath('//section[@class="body"]//a'):
@@ -115,7 +110,7 @@ def _parse_sections(url):
             subsection_href = subsection_link.attrib['href']
 
             # sub section link leads straight to search results
-            if re.search('/search/\w+', subsection_href):
+            if subsection_href.find('/search/') == 0:
                 paths.append([section, subsection, subsection_href])
             # sub section link leads to another submenu page
             else:
@@ -149,9 +144,12 @@ def build_db():
     # Write configs to file
     try:
         open(DB_FILE, 'w').write(db_structure)
-    except IOError as e:
-        print "I/O error({0}): {1}".format(e.errno, e.strerror)
+    except IOError:
+        print("Error, could not write db file: {}".format(DB_FILE)) >> sys.stderr
         sys.exit(1)
+
+    print("Parsed {} total Craigslist pages".format(len(page_paths)))
+    print("Parsed {} total sections".format(len(section_paths)))
 
 
 def _display_paths(records):
@@ -211,7 +209,7 @@ def get_post_data(url):
     """ Parse data from the actual post page """
     post_page = lxml.html.fromstring(requests.get(url).content)
     row = {
-        'description': __get_first(post_page, '//meta[@name="description"]', True),
+        'description': __get_first(post_page, '//meta[@name="description"]/@content'),
         'attributes': parse_post_attributes(post_page)
     }
     return row
@@ -249,12 +247,12 @@ def get_data(url, window, deep=False):
 
         title = __get_first(post, "a[@class='result-title hdrlnk']")
         row['title'] = title.text_content()
-        row['neighborhood'] = __get_first(post, 'span[@class="result-meta"]/span[@class="result-hood"]', True)
-        row['price'] = __get_first(post, 'span[@class="result-meta"]/span[@class="result-price"]', True)
+        row['neighborhood'] = __get_first(post, 'span[@class="result-meta"]/span[@class="result-hood"]/text()'),
+        row['price'] = __get_first(post, 'span[@class="result-meta"]/span[@class="result-price"]/text()')
         row['url'] = urljoin(url, title.attrib['href'])
         row['post_id'] = title.attrib['data-id']
 
-        tags = __get_first(post, 'span[@class="result-meta"]/span[@class="result-tags"]', True)
+        tags = __get_first(post, 'span[@class="result-meta"]/span[@class="result-tags"]/text()')
         if tags is not None:
             row['tags'] = tags.split()
         else:
