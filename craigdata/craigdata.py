@@ -17,6 +17,7 @@ import lxml.html
 import re
 from datetime import datetime, timedelta
 from urlparse import urljoin
+import xpathtpl
 
 
 DB_DIR = os.path.join(os.path.expanduser('~'), '.craigdata')
