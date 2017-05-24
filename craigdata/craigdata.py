@@ -19,6 +19,16 @@ from urlparse import urljoin
 from bs4 import BeautifulSoup
 import requests
 
+
+USER_AGENTS = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:11.0) Gecko/20100101 Firefox/11.0',
+               'Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:22.0) Gecko/20100 101 Firefox/22.0',
+               'Mozilla/5.0 (Windows NT 6.1; rv:11.0) Gecko/20100101 Firefox/11.0',
+               ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_4) AppleWebKit/536.5 (KHTML, like Gecko) '
+                'Chrome/19.0.1084.46 Safari/536.5'),
+               ('Mozilla/5.0 (Windows; Windows NT 6.1) AppleWebKit/536.5 (KHTML, like Gecko) Chrome/19.0.1084.46'
+               'Safari/536.5')
+               )
+
 DB_DIR = os.path.join(os.path.expanduser('~'), '.craigdata')
 DB_FILE = os.path.join(DB_DIR, 'db.json')
 BASE_URL = 'https://www.craigslist.org/about/sites'
@@ -31,7 +41,7 @@ POST_DATA = []
 def _get_soup(url):
     """ Return BeautifulSoup parser for page """
     try:
-        res = requests.get(url)
+        res = requests.get(url, headers={'User-Agent': random.choice(USER_AGENTS)})
     except requests.exceptions.RequestException:
         print("Failed retrieving {}".format(url)) >> sys.stderr
         sys.exit(1)
