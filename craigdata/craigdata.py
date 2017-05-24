@@ -49,6 +49,19 @@ def load_db():
     return json.load(open(DB_FILE))
 
 
+def _leveler(struct, container_list, row_list):
+    if 'levels' not in levels:
+        return
+    for k, v in levels['level']:
+        if 'href' in v and len(v['href']):
+            container_list.append(row_list + [k, v['href']])
+        row_list += [k]
+
+
+def _gather(levels):
+    return False
+
+
 def build_db():
     """ Build the pages/sections database and write to file """
     if not os.path.exists(DB_DIR):
@@ -56,46 +69,12 @@ def build_db():
 
     # get a list of all craigslist pages
     pages = xpathtpl.parse(_page_content(BASE_URL), pages_tpl)
-    pages_list = []
-    for p in pages['pages']:
-        country = p['country']
-        for s in p['states']:
-            state = s['name']
-            for c in s['cities']:
-                pages_list.append([country, state, c['name'], c['href']])
+    print(json.dumps(pages, indent=4, separators=(',', ': ')))
+    sys.exit()
 
     # make a list of all sections
     first_url = pages_list[0][-1]
     sections = xpathtpl.parse(_page_content(first_url), sections_tpl)
-    sections_list = []
-    for s in sections['sections']:
-        section = s['name']
-        # this section has a top-level page
-        if len(s['href']):
-            sections_list.append([section, s['href']])
-        for ss in s['sub-sections']:
-            subsection = ss['name']
-            # sub section leads to search page
-            if ss['href'].startswith('/search/'):
-                sections_list.append([section, subsection, ss['href']])
-            else:
-                submenu_page = _page_content(urljoin(first_url, ss['href']))
-                sub_a = xpathtpl.parse(submenu_page, submenu_tpl_a)
-                sub_b = xpathtpl.parse(submenu_page, submenu_tpl_b)
-                if len(sub_a['sections']):
-                    for header in sub_a['sections']:
-                        title = header['name']
-                        for sss in header['sub-sections']:
-                            sections_list.append([section, subsection, title, sss['name'], sss['href']])
-                if len(sub_b['sections']):
-                    for sss in sub_b['sections']:
-                        sections_list.append([section, subsection, sss['name'], sss['href']])
-
-    for s in sections_list:
-        print s
-    sys.exit()
-    # parse sections using the first available main page
-    section_paths = _parse_sections(page_paths[0][-1])
 
     db_structure = json.dumps({
         'pages': page_paths,

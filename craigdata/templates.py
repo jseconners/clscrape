@@ -8,21 +8,15 @@
 # template for getting all craigslist pages from all
 # countries and cities
 pages_tpl = {
-    'pages': {
+    'level': {
         '_xpath': '//section[@class="body"]/h1',
-        'country': {
-            '_xpath': './text()'
-        },
-        'states': {
+        '_ukeys': True,
+        'level': {
             '_xpath': './following-sibling::div[1]//h4',
-            'name': {
-                '_xpath': './text()'
-            },
-            'cities': {
+            '_ukeys': True,
+            'level': {
                 '_xpath': './following-sibling::ul[1]/li/a',
-                'name': {
-                    '_xpath': './text()'
-                },
+                '_ukeys': True,
                 'href': {
                     '_xpath': './@href'
                 }
@@ -33,19 +27,15 @@ pages_tpl = {
 
 # template for getting all sections
 sections_tpl = {
-    'sections': {
+    'level': {
         '_xpath': '//h4[@class="ban"]',
-        'name': {
-            '_xpath': '.'
-        },
+        '_ukeys': True,
         'href': {
             '_xpath': './a/@href'
         },
-        'sub-sections': {
+        'level': {
             '_xpath': './following-sibling::div[@class="cats"]/ul/li/a',
-            'name': {
-                '_xpath': '.'
-            },
+            '_ukeys': True,
             'href': {
                 '_xpath': './@href'
             }
@@ -54,16 +44,12 @@ sections_tpl = {
 }
 
 submenu_tpl_a = {
-    'sections': {
+    'level': {
         '_xpath': '//div[@class="leftside"]/h3',
-        'name': {
-            '_xpath': '.'
-        },
-        'sub-sections': {
+        '_ukeys': True,
+        'level': {
             '_xpath': './following-sibling::ul[1]/li/a',
-            'name': {
-                '_xpath': '.'
-            },
+            '_ukeys': True,
             'href': {
                 '_xpath': './@href'
             }
@@ -72,11 +58,9 @@ submenu_tpl_a = {
 }
 
 submenu_tpl_b = {
-    'sections': {
+    'level': {
         '_xpath': '//div[@class="links"]//a',
-        'name': {
-            '_xpath': '.'
-        },
+        '_ukeys': True,
         'href': {
             '_xpath': './@href'
         }
