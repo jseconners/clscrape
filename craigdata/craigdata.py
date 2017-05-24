@@ -13,12 +13,10 @@ import os
 import json
 import argparse
 import requests
+import lxml.html
+import re
 from datetime import datetime, timedelta
 from urlparse import urljoin
-from fake_useragent import UserAgent
-
-import xpathtpl
-from .templates import pages_tpl, sections_tpl, submenu_tpl_a, submenu_tpl_b
 
 
 DB_DIR = os.path.join(os.path.expanduser('~'), '.craigdata')
@@ -28,16 +26,97 @@ SKIP_SECTIONS = [
     'discussion forums'
 ]
 POST_DATA = []
-UA = UserAgent()
 
 
-def _page_content(url):
-    """ Get page content for url as binary string """
+def __get_first(html_obj, xpath):
+    """ Get first element returned from xpath expression, if available """
+    res = html_obj.xpath(xpath)
+    if len(res):
+        return res[0]
+    else:
+        return None
+
+
+def _get_page_obj(url):
+    """ Return page at url as object created from lxml.html.fromstring """
     try:
-        return requests.get(url, headers={'User-Agent': UA.random}).content
-    except requests.exceptions.RequestException as e:
-        print e
+        res = requests.get(url)
+    except requests.exceptions.RequestException:
+        print("Failed retrieving {}".format(url)) >> sys.stderr
         sys.exit(1)
+    return lxml.html.fromstring(res.content)
+
+
+def _parse_pages(url):
+    """ Parse all available pages from sites page """
+    paths = []
+    page = _get_page_obj(url)
+    for region in page.xpath('//h1'):
+        region_name = region.text_content()
+        for sub_region in region.getnext().xpath('div/h4'):
+            sub_region_name = sub_region.text
+            for place in sub_region.getnext().xpath('li/a'):
+                place_name = place.text
+                paths.append([region_name, sub_region_name, place_name, place.attrib['href']])
+    return paths
+
+
+def _parse_submenu_page(url):
+    """ Parse section submenu page, e.g. 'by owner', 'by dealer' or like personals etc. """
+    page = _get_page_obj(url)
+
+    paths = []
+    # This is the 'by owner', 'by dealer', etc. type
+    for h3 in page.xpath('//section[@class="body"]/div[@class="leftside"]/h3'):
+        header = h3.text.rstrip(':')
+        ul = h3.getnext()
+        for li_a in ul.xpath('li/a'):
+            section = li_a.text
+            section_href = li_a.attrib['href']
+            paths.append([header, section, section_href])
+    # Everything else. Just find all the links to valid post pages
+    else:
+        for section_link in page.xpath('//section[@class="body"]//a'):
+            section = section_link.text_content()
+            section_href = section_link.attrib['href']
+            if re.search('/search/\w+', section_href):
+                paths.append([section, section_href])
+    return paths
+
+
+def _parse_sections(url):
+    """ Parse sections from a location's main page """
+    page = _get_page_obj(url)
+
+    paths = []
+    # Loop through section headers
+    # e.g., jobs, for sale, etc.
+    for header in page.xpath("//h4[@class='ban']"):
+        section = header.text_content()
+        if section in SKIP_SECTIONS:
+            continue
+
+        # Add link to aggregate section page if available
+        section_link = __get_first(header, 'a')
+        if section_link is not None:
+            paths.append([section, section_link.attrib['href']])
+
+        # Parse subsections
+        subsection_div = header.getnext()
+        # Go through sub sections
+        # e.g. motorcycles, boats, etc.
+        for subsection_link in subsection_div.xpath('ul/li/a'):
+            subsection = subsection_link.text_content()
+            subsection_href = subsection_link.attrib['href']
+
+            # sub section link leads straight to search results
+            if subsection_href.find('/search/') == 0:
+                paths.append([section, subsection, subsection_href])
+            # sub section link leads to another submenu page
+            else:
+                for submenu_path in _parse_submenu_page(urljoin(url, subsection_href)):
+                    paths.append([section, subsection] + submenu_path)
+    return paths
 
 
 def load_db():
@@ -49,32 +128,13 @@ def load_db():
     return json.load(open(DB_FILE))
 
 
-def _leveler(struct, container_list, row_list):
-    if 'levels' not in levels:
-        return
-    for k, v in levels['level']:
-        if 'href' in v and len(v['href']):
-            container_list.append(row_list + [k, v['href']])
-        row_list += [k]
-
-
-def _gather(levels):
-    return False
-
-
 def build_db():
     """ Build the pages/sections database and write to file """
     if not os.path.exists(DB_DIR):
         os.makedirs(DB_DIR)
-
-    # get a list of all craigslist pages
-    pages = xpathtpl.parse(_page_content(BASE_URL), pages_tpl)
-    print(json.dumps(pages, indent=4, separators=(',', ': ')))
-    sys.exit()
-
-    # make a list of all sections
-    first_url = pages_list[0][-1]
-    sections = xpathtpl.parse(_page_content(first_url), sections_tpl)
+    page_paths = _parse_pages(BASE_URL)
+    # parse sections using the first available main page
+    section_paths = _parse_sections(page_paths[0][-1])
 
     db_structure = json.dumps({
         'pages': page_paths,
