@@ -12,12 +12,12 @@ import sys
 import os
 import json
 import argparse
-import requests
-import lxml.html
 import re
 from datetime import datetime, timedelta
 from urlparse import urljoin
 
+from bs4 import BeautifulSoup
+import requests
 
 DB_DIR = os.path.join(os.path.expanduser('~'), '.craigdata')
 DB_FILE = os.path.join(DB_DIR, 'db.json')
@@ -28,95 +28,128 @@ SKIP_SECTIONS = [
 POST_DATA = []
 
 
-def __get_first(html_obj, xpath):
-    """ Get first element returned from xpath expression, if available """
-    res = html_obj.xpath(xpath)
-    if len(res):
-        return res[0]
-    else:
-        return None
-
-
-def _get_page_obj(url):
-    """ Return page at url as object created from lxml.html.fromstring """
+def _get_soup(url):
+    """ Return BeautifulSoup parser for page """
     try:
         res = requests.get(url)
     except requests.exceptions.RequestException:
         print("Failed retrieving {}".format(url)) >> sys.stderr
         sys.exit(1)
-    return lxml.html.fromstring(res.content)
+    return BeautifulSoup(res.content, 'html.parser')
+
+
+def _display_paths(records):
+    """ Display structured content from the database file """
+    for (i, p) in enumerate(records):
+        format_string = "{:<3}: " + " >> ".join([j for j in p[:-1]])
+        print(format_string.format(i, *p).encode('utf-8'))
+
+
+def _get_t(elm):
+    """ helper function, get text if element exists """
+    return elm.text.strip() if elm is not None else elm
+
+
+def _get_a(elm, a):
+    """ helper function, get attribute if element exists """
+    return elm.get(a) if elm is not None else elm
 
 
 def _parse_pages(url):
-    """ Parse all available pages from sites page """
-    paths = []
-    page = _get_page_obj(url)
-    for region in page.xpath('//h1'):
-        region_name = region.text_content()
-        for sub_region in region.getnext().xpath('div/h4'):
-            sub_region_name = sub_region.text
-            for place in sub_region.getnext().xpath('li/a'):
-                place_name = place.text
-                paths.append([region_name, sub_region_name, place_name, place.attrib['href']])
-    return paths
+    """ Parse all craigslist pages from /about page """
+    sp = _get_soup(url)
+    pages = []
+    for h1 in sp('h1'):
+        country = h1.text
+        for h4 in h1.find_next("div").find_all('h4'):
+            state = h4.text
+            for a in h4.find_next("ul").find_all('a'):
+                pages.append([country, state, a.text, a.get('href')])
+    sp.decompose()
+    return pages
 
 
-def _parse_submenu_page(url):
-    """ Parse section submenu page, e.g. 'by owner', 'by dealer' or like personals etc. """
-    page = _get_page_obj(url)
-
-    paths = []
-    # This is the 'by owner', 'by dealer', etc. type
-    for h3 in page.xpath('//section[@class="body"]/div[@class="leftside"]/h3'):
-        header = h3.text.rstrip(':')
-        ul = h3.getnext()
-        for li_a in ul.xpath('li/a'):
-            section = li_a.text
-            section_href = li_a.attrib['href']
-            paths.append([header, section, section_href])
-    # Everything else. Just find all the links to valid post pages
-    else:
-        for section_link in page.xpath('//section[@class="body"]//a'):
-            section = section_link.text_content()
-            section_href = section_link.attrib['href']
-            if re.search('/search/\w+', section_href):
-                paths.append([section, section_href])
-    return paths
-
-
-def _parse_sections(url):
-    """ Parse sections from a location's main page """
-    page = _get_page_obj(url)
-
-    paths = []
-    # Loop through section headers
-    # e.g., jobs, for sale, etc.
-    for header in page.xpath("//h4[@class='ban']"):
-        section = header.text_content()
-        if section in SKIP_SECTIONS:
+def _parse_sections(url, skip=[]):
+    """ Parse all available sections from any craigslist page """
+    sp = _get_soup(url)
+    sections = []
+    for h4 in sp('h4', class_='ban'):
+        section = h4.text
+        if section in skip:
             continue
-
-        # Add link to aggregate section page if available
-        section_link = __get_first(header, 'a')
-        if section_link is not None:
-            paths.append([section, section_link.attrib['href']])
-
-        # Parse subsections
-        subsection_div = header.getnext()
-        # Go through sub sections
-        # e.g. motorcycles, boats, etc.
-        for subsection_link in subsection_div.xpath('ul/li/a'):
-            subsection = subsection_link.text_content()
-            subsection_href = subsection_link.attrib['href']
-
-            # sub section link leads straight to search results
-            if subsection_href.find('/search/') == 0:
-                paths.append([section, subsection, subsection_href])
-            # sub section link leads to another submenu page
+        if h4.a:
+            sections.append([section, h4.a.get('href')])
+        for a in h4.find_next('div').find_all('a'):
+            cat = a.text
+            href = a.get('href')
+            if href.startswith('/search/'):
+                sections.append([section, cat, href])
             else:
-                for submenu_path in _parse_submenu_page(urljoin(url, subsection_href)):
-                    paths.append([section, subsection] + submenu_path)
-    return paths
+                submenu_url = urljoin(url, href)
+                for submenu_section in _parse_section_submenu(submenu_url):
+                    sections.append([section, cat] + submenu_section)
+    sp.decompose()
+    return sections
+
+
+def _parse_section_submenu(url):
+    """ Parse category submenu page, i.e. bikes (by owner, etc.) """
+    sp = _get_soup(url)
+    # two types of submenus, identified by link container div
+    submenu_a = sp.find('div', class_='leftside')
+    submenu_b = sp.find('div', class_='links')
+    submenu_sections = []
+    if submenu_a:
+        for h3 in submenu_a.find_all('h3'):
+            cat = h3.text
+            for a in h3.find_next('ul').find_all('a'):
+                subcat = a.text
+                href = a.get('href')
+                submenu_sections.append([cat, subcat, href])
+    elif submenu_b:
+        for a in submenu_b.find_all('a'):
+            cat = a.text
+            href = a.get('href')
+            submenu_sections.append([cat, href])
+    sp.decompose()
+    return submenu_sections
+
+
+def _parse_post_page(url):
+    """ get full description and optional attributes from post page """
+    sp = _get_soup(url)
+    post_data = {
+        'description': _get_a(sp.find('meta', {'name': 'description'}), 'content')
+    }
+    attributes = []
+    for p in sp('p', class_='attrgroup'):
+        for span in p.find_all('span'):
+            parts = tuple([p.strip() for p in span.text.split(':')])
+            if len(parts) != 2:
+                continue
+            attributes.append(parts)
+    post_data['attributes'] = dict(attributes)
+    sp.decompose()
+    return post_data
+
+
+def _parse_post(post, url):
+    # reliable post data
+    title_tag = post.find('a', class_='result-title hdrlnk')
+    time_tag = post.find('time')
+
+    data = {
+        'date_time': time_tag.get('datetime'),
+        'title': title_tag.text.strip(),
+        'post-id': title_tag.get('data-id'),
+        'url': urljoin(url, title_tag.get('href')),
+        # data that may not exist
+        'neighborhood': _get_t(post.find('span', class_='result-hood')),
+        'price': _get_t(post.find('span', class_='result-price')),
+        'tags': _get_t(post.find('span', class_='result-tags'))
+    }
+    data['tags'] = data['tags'].split() if data['tags'] else []
+    return data
 
 
 def load_db():
@@ -141,7 +174,7 @@ def build_db():
         'sections': section_paths
     }, indent=4, separators=(',', ': '))
 
-    # Write configs to file
+    # Write to file
     try:
         open(DB_FILE, 'w').write(db_structure)
     except IOError:
@@ -152,32 +185,47 @@ def build_db():
     print("Parsed {} total sections".format(len(section_paths)))
 
 
-def _display_paths(records):
-    """ Display structured content from the database file """
-    for (i, p) in enumerate(records):
-        format_string = "{:<3}: " + " >> ".join([j for j in p[:-1]])
-        print(format_string.format(i, *p).encode('utf-8'))
+def get_data(url, window, deep=False):
+    """ Given the main page url for a section, parse and store the post data from the
+    most recent (i.e., first) post backward within the specified time window (minutes).
+    If deep=True, visit each post page for extra data.
+    """
+    sp = _get_soup(url)
 
+    end_datetime = None
+    for post in sp.find_all('p', class_='result-info'):
+        # parse post data
+        data = _parse_post(post, url)
 
-def get_parser():
-    parser = argparse.ArgumentParser(description='craigslist post data puller')
-    subparsers = parser.add_subparsers(title='commands', dest='command')
+        # Set the end and begin datetime for window from first post
+        post_datetime = datetime.strptime(data['date_time'], '%Y-%m-%d %H:%M')
+        if end_datetime is None:
+            begin_datetime = post_datetime
+            end_datetime = begin_datetime - timedelta(minutes=window)
 
-    subparsers.add_parser('build', help='build page/section database file')
+        # End parsing if we've passed the end of tme window
+        if post_datetime < end_datetime:
+            return
 
-    list_parser = subparsers.add_parser('list', help='list pages or sections')
-    list_parser.add_argument('what', choices=['pages', 'sections'],
-                             help='what to list from the db')
+        # Go deep and pull more fields from post page
+        if deep:
+            data.update(_parse_post_page(data['url']))
 
-    pull_parser = subparsers.add_parser('pull', help='pull some post data')
-    pull_parser.add_argument('pid', type=int, help='page id')
-    pull_parser.add_argument('sid', type=int, help='section id')
-    pull_parser.add_argument('-d', '--deep', help='go deep, visit post page and get more fields',
-                             action='store_true')
-    pull_parser.add_argument('-w', '--window', type=str, default=':30',
-                             help='time window back from most recent post, # (hrs), #:# (hrs:mins), :# (mins). '
-                                  'default is :30 (30 mins)')
-    return parser
+        POST_DATA.append(data)
+
+    # decompose parser
+    sp.decompose()
+
+    if end_datetime is not None:
+        # Reached the end of the page, but not the time window.
+        # Adjust the time window based on how far we've traversed
+        # and start parsing the next page if available.
+        traversed = ((begin_datetime - post_datetime).total_seconds() / 60.0)
+        adjusted_window = window - traversed
+        next_link = page.find('a', class_='button next')
+        if next_link:
+            next_url = urljoin(url, next_link.get('href'))
+            get_data(next_url, adjusted_window, deep)
 
 
 def parse_time_window(window):
@@ -194,85 +242,27 @@ def parse_time_window(window):
     return None
 
 
-def parse_post_attributes(post_page):
-    """ Parse the attributes section of a post page into a dictionary """
-    attributes = []
-    for att in post_page.xpath('//p[@class="attrgroup"]/span'):
-        parts = tuple([p.strip() for p in att.text_content().split(':')])
-        if len(parts) != 2:
-            continue
-        attributes.append(parts)
-    return dict(attributes)
+def get_parser():
+    parser = argparse.ArgumentParser(description='craigslist post data puller')
+    subparsers = parser.add_subparsers(title='commands', dest='command')
 
+    subparsers.add_parser('build', help='build page/section database file')
 
-def get_post_data(url):
-    """ Parse data from the actual post page """
-    post_page = lxml.html.fromstring(requests.get(url).content)
-    row = {
-        'description': __get_first(post_page, '//meta[@name="description"]/@content'),
-        'attributes': parse_post_attributes(post_page)
-    }
-    return row
+    list_parser = subparsers.add_parser('list', help='list pages or sections')
+    list_parser.add_argument('what', choices=['pages', 'sections'],
+                             help='what to list from the db')
 
-
-def get_data(url, window, deep=False):
-    """ Given the main page url for a section, parse and store the post data from the
-    most recent (i.e., first) post backward within the specified time window (minutes).
-    If deep=True, visit each post page for extra data.
-    """
-
-    page = lxml.html.fromstring(requests.get(url).content)
-    posts = page.xpath("//p[@class='result-info']")
-
-    # Don't want to go into next-page else block if there
-    # are no posts on this page
-    if not len(posts):
-        return
-
-    end_datetime = None
-    for post in posts:
-        row = {
-            'date_time': post.xpath("time")[0].attrib['datetime']
-        }
-        post_datetime = datetime.strptime(row['date_time'], '%Y-%m-%d %H:%M')
-
-        # Set the end and begin datetime for window from first post
-        if end_datetime is None:
-            begin_datetime = post_datetime
-            end_datetime = begin_datetime - timedelta(minutes=window)
-
-        # End parsing if we've reached the end of tme window
-        if post_datetime < end_datetime:
-            break
-
-        title = __get_first(post, "a[@class='result-title hdrlnk']")
-        row['title'] = title.text_content()
-        row['neighborhood'] = __get_first(post, 'span[@class="result-meta"]/span[@class="result-hood"]/text()'),
-        row['price'] = __get_first(post, 'span[@class="result-meta"]/span[@class="result-price"]/text()')
-        row['url'] = urljoin(url, title.attrib['href'])
-        row['post_id'] = title.attrib['data-id']
-
-        tags = __get_first(post, 'span[@class="result-meta"]/span[@class="result-tags"]/text()')
-        if tags is not None:
-            row['tags'] = tags.split()
-        else:
-            row['tags'] = []
-
-        # Go deep and pull more fields from post page
-        if deep:
-            post_data = get_post_data(row['url'])
-            row.update(post_data)
-
-        POST_DATA.append(row)
-    else:
-        # Reached the end of the page, but not the time window.
-        # Adjust the time window based on how far we've traversed
-        # and start parsing the next page if available.
-        adjusted_window = window - ((begin_datetime - post_datetime).total_seconds() / 60.0)
-        next_links = page.xpath('//a[@class="button next"]')
-        if len(next_links):
-            next_url = urljoin(url, next_links[0].attrib['href'])
-            get_data(next_url, adjusted_window, deep)
+    pull_parser = subparsers.add_parser('pull', help='pull some post data')
+    pull_parser.add_argument('pid', type=int, help='page id')
+    pull_parser.add_argument('sid', type=int, help='section id')
+    pull_parser.add_argument('-d', '--deep',
+                            help='go deep, visit post page and get more fields',
+                             action='store_true')
+    pull_parser.add_argument('-w', '--window', type=str, default=':30',
+                             help='time window back from most recent post, '
+                                  '# (hrs), #:# (hrs:mins), :# (mins). '
+                                  'default is :30 (30 mins)')
+    return parser
 
 
 def command_line_runner():
