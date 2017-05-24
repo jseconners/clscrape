@@ -7,8 +7,8 @@
 
 # template for getting all craigslist pages from all
 # countries and cities
-sites_template = {
-    'sites': {
+pages_tpl = {
+    'pages': {
         '_xpath': '//section[@class="body"]/h1',
         'country': {
             '_xpath': './text()'
@@ -32,7 +32,7 @@ sites_template = {
 }
 
 # template for getting all sections
-sections_template = {
+sections_tpl = {
     'sections': {
         '_xpath': '//h4[@class="ban"]',
         'name': {
@@ -49,6 +49,36 @@ sections_template = {
             'href': {
                 '_xpath': './@href'
             }
+        }
+    }
+}
+
+submenu_tpl_a = {
+    'sections': {
+        '_xpath': '//div[@class="leftside"]/h3',
+        'name': {
+            '_xpath': '.'
+        },
+        'sub-sections': {
+            '_xpath': './following-sibling::ul[1]/li/a',
+            'name': {
+                '_xpath': '.'
+            },
+            'href': {
+                '_xpath': './@href'
+            }
+        }
+    }
+}
+
+submenu_tpl_b = {
+    'sections': {
+        '_xpath': '//div[@class="links"]//a',
+        'name': {
+            '_xpath': '.'
+        },
+        'href': {
+            '_xpath': './@href'
         }
     }
 }
