@@ -137,9 +137,6 @@ Installation
 
     python setup.py install
 
-craigdata requires lxml, which requires the libxml2 and libxslt libraries. If these aren't installed already
-setuptools will give you and error trying to install lxml. See the requirements page for lxml:
-http://lxml.de/installation.html
 
 Usage
 -----
@@ -191,5 +188,3 @@ Development
 
 -  Checkout the repo
 -  Run `python -m craigdata.craigdata` (if you try running `python craigdata/craigdata.py` you my get `ValueError: Attempted relative import in non-package`).
-
-
