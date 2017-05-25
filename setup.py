@@ -55,7 +55,7 @@ setup(
         ]
     },
     install_requires=[
-        'lxml',
+        'beautifulsoup4',
         'requests'
     ] + extra_dependencies(),
 )
