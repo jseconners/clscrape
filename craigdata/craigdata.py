@@ -15,6 +15,7 @@ import argparse
 import re
 from datetime import datetime, timedelta
 from urlparse import urljoin
+import random
 
 from bs4 import BeautifulSoup
 import requests
