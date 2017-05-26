@@ -152,7 +152,7 @@ def _parse_post(post, url):
     data = {
         'date_time': time_tag.get('datetime'),
         'title': title_tag.text.strip(),
-        'post-id': title_tag.get('data-id'),
+        'post_id': title_tag.get('data-id'),
         'url': urljoin(url, title_tag.get('href')),
         # data that may not exist
         'neighborhood': _get_t(post.find('span', class_='result-hood')),
