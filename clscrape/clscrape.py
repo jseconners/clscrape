@@ -2,8 +2,7 @@
 
 ######################################################
 #
-# craigdata - pull post data from craiglist from the
-# command line.
+# clscrape - command line craigslist scraper
 # Written by James Conners (jseconners@gmail.com)
 #
 ######################################################
@@ -30,7 +29,7 @@ USER_AGENTS = ('Mozilla/5.0 (Macintosh; Intel Mac OS X 10.7; rv:11.0) Gecko/2010
                'Safari/536.5')
                )
 
-DB_DIR = os.path.join(os.path.expanduser('~'), '.craigdata')
+DB_DIR = os.path.join(os.path.expanduser('~'), '.clscrape')
 DB_FILE = os.path.join(DB_DIR, 'db.json')
 BASE_URL = 'https://www.craigslist.org/about/sites'
 SKIP_SECTIONS = [
@@ -254,7 +253,7 @@ def parse_time_window(window):
 
 
 def get_parser():
-    parser = argparse.ArgumentParser(description='craigslist post data puller')
+    parser = argparse.ArgumentParser(description='command line craigslist scraper')
     subparsers = parser.add_subparsers(title='commands', dest='command')
 
     subparsers.add_parser('build', help='build page/section database file')
@@ -263,11 +262,11 @@ def get_parser():
     list_parser.add_argument('what', choices=['pages', 'sections'],
                              help='what to list from the db')
 
-    pull_parser = subparsers.add_parser('pull', help='pull some post data')
+    pull_parser = subparsers.add_parser('get', help='get some post data')
     pull_parser.add_argument('pid', type=int, help='page id')
     pull_parser.add_argument('sid', type=int, help='section id')
     pull_parser.add_argument('-d', '--deep',
-                            help='go deep, visit post page and get more fields',
+                             help='go deep, visit post page and get more fields',
                              action='store_true')
     pull_parser.add_argument('-w', '--window', type=str, default=':30',
                              help='time window back from most recent post, '

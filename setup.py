@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from setuptools import setup, find_packages
-import craigdata
+import clscrape
 import os
 
 
@@ -37,11 +37,11 @@ News
 """ % read('README', 'CHANGES')
 
 setup(
-    name='craigdata',
-    version=craigdata.__version__,
-    description='Craigslist post data from the command line',
+    name='clscrape',
+    version=clscrape.__version__,
+    description='Command line craiglist scraper',
     long_description=long_description,
-    keywords='craigdata craigslist posts data console command line',
+    keywords='web scraping craigslist data console command line',
     author='James Conners',
     author_email='jseconners@gmail.com',
     maintainer='James Conners',
@@ -51,7 +51,7 @@ setup(
     packages=find_packages(),
     entry_points={
         'console_scripts': [
-            'craigdata = craigdata.craigdata:command_line_runner',
+            'clscrape = clscrape.clscrape:command_line_runner',
         ]
     },
     install_requires=[
